@@ -5,15 +5,15 @@
 #include <algorithm>
 #include <stdio.h>
 #include <string.h>
-/*  Method: main
-    Return: --
-    Elements: --
-    Description: The main method will read input file called Plain.
-                    The Plain file is our Plain program.
- */
+
 using namespace std;
 const int MAX = 100;
 
+/*  Method: is_number
+    Return: --
+    Elements: --
+    Description: This method will check if the string is a constant or variavle.
+ */
 bool is_number(const std::string& s)
 {
     return !s.empty() && find_if(s.begin(),
@@ -28,20 +28,16 @@ bool is_number(const std::string& s)
  */
 class Node
 {
-    string id, type, location, lineNum = " "; //Not sure about command. lets keep it for now
-    //string location = "";
-    //string lineNum = "";
+    string id, type, location = " "; 
     Node* next;
 public:
     //constructor
     Node();
     //constructor
-    Node(string lineNum, string key, /*string value,*/ string type, string location)
+    Node(string key, string type, string location)
     {
         this->id = key;
-        //this->command = value;
         this->type = type;
-        this->lineNum = lineNum;
         this->location = location;
         next = NULL;
     }
@@ -74,9 +70,9 @@ public:
     }
     //~TableEntry();
 
-    bool insert(string lineNum, string id, string type, string location);
+    bool insert(string id, string type, string location);
     bool deleteRecord(string id);
-    bool modify(string lineNum, string id, string type);
+    bool modify(string id, string type);
 
     string find(string id);
 
@@ -84,15 +80,13 @@ public:
 };
 
 // Function to insert an identifier 
-bool TableEntry::insert(string lineNum, string id, string type, string location)
+bool TableEntry::insert(string id, string type, string location)
 {
     int index = hashf(id);
-    Node* p = new Node(lineNum, id, type, location);
+    Node* p = new Node(id, type, location);
 
     if (head[index] == NULL) {
         head[index] = p;
-        /*cout << "\n"
-            << id << " inserted";*/
 
         return true;
     }
@@ -103,8 +97,6 @@ bool TableEntry::insert(string lineNum, string id, string type, string location)
             start = start->next;
 
         start->next = p;
-        /*cout << "\n"
-            << id << " inserted";*/
 
         return true;
     }
@@ -152,7 +144,7 @@ bool TableEntry::deleteRecord(string id)
 }
 
 // Function to modify an identifier 
-bool TableEntry::modify(string lineNum, string id, string type)
+bool TableEntry::modify(string id, string type)
 {
     int index = hashf(id);
     Node* start = head[index];
@@ -162,9 +154,7 @@ bool TableEntry::modify(string lineNum, string id, string type)
 
     while (start != NULL) {
         if (start->id == id) {
-            //start->scope = s; 
             start->type = type;
-            start->lineNum = lineNum;
             return true;
         }
         start = start->next;
@@ -206,29 +196,27 @@ int TableEntry::hashf(string id)
     return (asciiSum % 100);
 }
 
-
+/*  Method: main
+    Return: --
+    Elements: --
+    Description: The main method will read input file called Plain.
+                    The Plain file is our Plain program.
+ */
 int main()
 {
-    char character;
     string token;
     string inputLine;
     string line;
-    string tName;
+    string location = "";
+    string type = "";
     ifstream input;
     TableEntry st;
-    string constLineNum;
-    //string input;
     char* tkn;
-    string lineNum;
     int topDown = 99;
     int buttomUp = 0;
-    
-    
-    const int MAX_TOKENS_PER_LINE = 20;
-    const int MAX_CHARS_PER_LINE = 512;
     int count = 0;
 
-    input.open("C:/Users/97254/Plain/Plain.txt");
+    input.open("C:/Users/97254/source/repos/Project2Dani__Josh/Plain.txt");
     cout << "Entered file Plain.txt\n";
 
     //check if was able to open input file
@@ -238,122 +226,144 @@ int main()
 
         return 0;
     }
-
-    //I took it from somewhere but this is checks only one token per line.
-    //We need to change it to something that looks like the example of Plain.
-    //Will keep it for now as a refernce, but MUST modifide for later use.
     
     while (!input.eof())
     {
         bool endLine = false;
-        getline(input, inputLine);
-        tkn = strtok((char*)inputLine.c_str(), " ,.-");
+        getline(input, inputLine); //Get next line
+        tkn = strtok((char*)inputLine.c_str(), " ,.-"); //Get token
         count = 0;
         while (!endLine)
         {
             token = tkn;
-            string location = "";
-            string type = "";
+            //Every line begins with line number.
+            //Then, count will be 0 and it will insert line number as token.
             if (count == 0)
             {
-                lineNum = tkn;
-                constLineNum = tkn;
                 type = 'L';
                 location = to_string(buttomUp);
                 buttomUp++;
-                //cout << "Line Number: ";
-                //cout << lineNum;
                 count++;
-                st.insert(lineNum, tkn, type, location);
+                st.insert(tkn, type, location);
                 st.find(tkn);
             }
 
+            //If token is not line number.
+            //Line numbers after the first token are ignored.
             else
             {
+                //Input variable for the first time.
+                //Variables are not inserted in the symbol table anywhere else.
                 if (token.compare("input") == 0)
                 {
-                    tkn = strtok(NULL, " ,.-");
+                    tkn = strtok(NULL, " ,.-"); //Go to next token
                     type = "V";
-                    lineNum = constLineNum;
                     location = to_string(topDown);
                     topDown--;
-                    st.insert(lineNum, tkn, type, location);
+                    st.insert(tkn, type, location);
                     st.find(tkn);
                 }
-                else if (tkn == "if")
+                //If token is 'if' it identifies all constants
+                //We are skipping comparaters 
+                //Variables are identified but not added to the symbol tyble, because they are already there
+                else if (token.compare("if") == 0)
                 {
-
+                    while (!(token.compare("goto") == 0))
+                    {
+                        tkn = strtok(NULL, " ,.-");
+                        token = tkn;
+                        if (is_number(tkn))
+                        {
+                            type = 'C';
+                            location = to_string(topDown);
+                            topDown--;
+                            st.insert(tkn, type, location);
+                            st.find(tkn);
+                        }
+                        /*else {
+                            type = 'V';
+                            location = to_string(topDown);
+                            topDown--;
+                            st.insert(tkn, type, location);
+                            st.find(tkn);
+                        }*/
+                        tkn = strtok(NULL, " ,.-");
+                        token = tkn;
+                    }  
                 }
+                //Adds constants that are outputed
+                //but not variables.
+                //If outputing a viarable, it already in the symbol table.
                 else if (token.compare("output") == 0)
                 {
                     tkn = strtok(NULL, " ,.-");
                     if (is_number(tkn))
                     {
-                        lineNum = tkn;
                         type = 'C';
                         location = to_string(topDown);
                         topDown--;
-                        st.insert(lineNum, tkn, type, location);
+                        st.insert(tkn, type, location);
                         st.find(tkn);
                     }
-                    else {
-                        lineNum = tkn;
+                    /*else {
                         type = 'V';
                         location = to_string(topDown);
                         topDown--;
-                        st.insert(lineNum, tkn, type, location);
+                        st.insert(tkn, type, location);
                         st.find(tkn);
-                    }
+                    }*/
                 }
+                //If token is "prog_end", it is terminates the program
                 else if (token.compare("prog_end") == 0)
                 {
                     return 0;
                 }
+                //Go to next line
+                //Line numbers after are tokens
                 else if (token.compare("goto") == 0)
                 {
                     endLine = true;
                 }
+                //Go to next input line
+                //Line numbers after are tokens
                 else if (token.compare("comment") == 0)
                 {
                     endLine = true;
                 }
+                //Identifies variables but only adds constants to the symbol table.
+                //Loops until end of line to allow multipule opperaters on RHS.
                 else if (token.compare("assign") == 0)
                 {
                     tkn = strtok(NULL, " ,.-");
-                    type = "V";
-                    lineNum = constLineNum;
+                    /*type = "V";
                     location = to_string(topDown);
                     topDown--;
-                    st.insert(lineNum, tkn, type, location);
-                    st.find(tkn);
+                    st.insert(tkn, type, location);
+                    st.find(tkn);*/
                     tkn = strtok(NULL, " ,.-");
                     while(tkn != NULL)
                     {
                         tkn = strtok(NULL, " ,.-");
                         if (is_number(tkn))
                         {
-                            lineNum = tkn;
                             type = 'C';
                             location = to_string(topDown);
                             topDown--;
-                            st.insert(lineNum, tkn, type, location);
+                            st.insert( tkn, type, location);
                             st.find(tkn);
                         }
-                        else {
-                            lineNum = tkn;
+                        /*else {
                             type = 'V';
                             location = to_string(topDown);
                             topDown--;
-                            st.insert(lineNum, tkn, type, location);
+                            st.insert(tkn, type, location);
                             st.find(tkn);
-                        }
+                        }*/
                         tkn = strtok(NULL, " ,.-");
                     }
                 }
-                /*else
-                {
-                    tkn = strtok((char*)inputLine.c_str(), " ,.-");
-                }*/
+                //Gets next token unless next token is null
+                //If next token is null, go to next line.
                 try
                 {
                     tkn = strtok(NULL, " ,.-");
@@ -366,17 +376,10 @@ int main()
                 }
                 catch (...)
                 {
-                    //cout << "ERROR!!!!";
+                    cout << "ERROR!!!!";
                 }
             }
 
-        } //while (!input.eof());
+        }
     }
 }
-
-//constructor
-
-//inline Node::Node()
-//{
-//    next = NULL;
-//}
